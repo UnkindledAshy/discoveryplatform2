@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
+        Schema::create('reviews', function (Blueprint $table) {
             $table->id();
-            $table->string('title', 80);
-            $table->longText('description');
-            $table->string('banner_image', 220)->nullable();
-            $table->integer("cost")->nullable();
-            $table->foreignId("users")->constrained("users");
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('game_id')->constrained('games')->onDelete('cascade');
+            $table->text('content');
+            $table->integer('rating');
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::dropIfExists('reviews');
     }
 };

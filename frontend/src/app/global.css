@@ -2,73 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-}
-
-/* *=========== Default theme =========== */
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* White */
+    --foreground: 0 0% 0%;
+    /* Black */
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 0 0% 95%;
+    /* #F3F3F3 approx */
+    --muted-foreground: 0 0% 40%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 0 0% 0%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
 
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 223 100% 50%;
+    /* Electric Blue #0047FF */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 0%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 223 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 240 10% 3.9%;
+    --ring: 223 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0rem;
+    /* Doss uses sharp edges */
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 0%;
+    /* Deep Black */
+    --foreground: 0 0% 100%;
+    /* Pure White */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 64.9%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 223 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 223 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 240 4.9% 83.9%;
+    --ring: 223 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    @apply font-sans antialiased;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .dashed-grid {
+    background-image: radial-gradient(#333 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .dashed-border-b {
+    border-bottom: 1px dashed #333;
+  }
+
+  .dashed-border-r {
+    border-right: 1px dashed #333;
+  }
+
+  .text-shadow-blue {
+    text-shadow: 0 0 20px rgba(0, 71, 255, 0.5);
   }
 }

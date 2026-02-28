@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -28,7 +30,7 @@ class AuthController extends Controller
             'token' => $token
         ];
 
-        return response($response, 201, message: 'User registered successfully' );
+        return response()->json($response, 201);
 
 
     }
@@ -53,25 +55,26 @@ class AuthController extends Controller
 
         $response = [
             'user' => $user,
-            'token' => $token
+            'token' => $token,
+            'message' => 'User logged in successfully'
         ];
 
-        return response($response, 201, message: 'User logged in successfully' );
-    
+        return response()->json($response, 200);
     }
     //Profile
     public function Profile(){
         $user = auth()->user();
-        return response($user, 200, message: 'User profile retrieved successfully');
-
+        return response()->json([
+            'user' => $user,
+            'message' => 'User profile retrieved successfully'
+        ], 200);
     }
     //Logout
-    public function logout(){
-        Auth::logout(); 
+    public function logout(Request $request){
+        $request->user()->currentAccessToken()->delete();
 
         return response([
             'message' => 'User logged out successfully'
         ], 200);
-
     }
 }
