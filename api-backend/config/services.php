@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'rawg' => [
+        'key' => env('51ae123f5007407b899b5bbe8f52aa75'),
+        'base_url' => 'https://api.rawg.io/api/',
+    ],
+
 ];

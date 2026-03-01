@@ -26,6 +26,8 @@ class ReviewController extends Controller
             'game_id' => 'required|exists:games,id',
             'content' => 'required|string',
             'rating' => 'required|integer|min:1|max:5',
+            'description' => 'required|string',
+            'user_id' => 'required|exists:users,id',
         ]);
 
         $review = Auth::user()->reviews()->create($validated);
@@ -56,6 +58,8 @@ class ReviewController extends Controller
         $validated = $request->validate([
             'content' => 'required|string',
             'rating' => 'required|integer|min:1|max:5',
+            'description' => 'required|string',
+            'user_id' => 'required|exists:users,id',
         ]);
 
         $review->update($validated);
