@@ -11,7 +11,6 @@ class Game extends Model
         'description',
         'genre',
         'platform',
-        'cost',
         'banner_image',
     ];
     public function reviews()
