@@ -65,6 +65,9 @@ export default function ProfilePage() {
 
                 const reviewsRes = await api.get('/reviews');
                 setReviews(reviewsRes.data);
+
+                const favoritesRes = await api.get('/favorites');
+                setFavorites(favoritesRes.data);
             } catch (err) {
                 console.error('Failed to load profile data', err);
                 if ((err as any).response?.status === 401) {
@@ -89,6 +92,16 @@ export default function ProfilePage() {
         }
     };
 
+    const handleRemoveFavorite = async (gameId: number) => {
+        if (!confirm('REMOVE_GAME_FROM_YOUR_COLLECTION?')) return;
+        try {
+            await api.post('/favorites', { game_id: gameId });
+            setFavorites(favorites.filter(f => f.id !== gameId));
+        } catch (err) {
+            alert('ERR_REMOVAL_FAILED');
+        }
+    };
+
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingReview) return;
@@ -98,7 +111,9 @@ export default function ProfilePage() {
                 content: editContent,
                 rating: editRating
             });
-            setReviews(reviews.map(r => r.id === editingReview.id ? response.data.review : r));
+            // The backend now returns the review with user and game loaded
+            const updatedReview = response.data.review;
+            setReviews(reviews.map(r => r.id === editingReview.id ? updatedReview : r));
             setEditingReview(null);
         } catch (err) {
             alert('ERR_UPDATE_FAILED');
@@ -238,22 +253,41 @@ export default function ProfilePage() {
                                     <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">NO_FAVORITES_RECORDED</h3>
                                 </div>
                             ) : (
-                                favorites.map((fav) => (
-                                    <div key={fav.id} className="relative border-r border-b border-[#333] border-dashed p-8 hover:bg-white/5 transition-all group">
+                                favorites.map((game: any) => (
+                                    <div key={game.id} className="relative border-r border-b border-[#333] border-dashed p-8 hover:bg-white/5 transition-all group">
                                         <div className="flex justify-between items-start mb-6">
                                             <div className="flex flex-col">
-                                                <span className="text-[8px] text-blue-500 font-black uppercase tracking-[0.3em] mb-1">Favorite #{fav.id}</span>
-                                                <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-blue-500 transition-colors">{fav.title}</h3>
+                                                <span className="text-[8px] text-blue-500 font-black uppercase tracking-[0.3em] mb-1">Game ID #{game.id}</span>
+                                                <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-blue-500 transition-colors uppercase">{game.title}</h3>
                                             </div>
-                                            <button className="p-2 bg-blue-600 text-white">
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                            </button>
+                                            <div className="flex bg-black border border-[#333] border-dashed">
+                                                <button
+                                                    onClick={() => router.push(`/games/${game.id}`)}
+                                                    className="p-2 hover:bg-blue-600 hover:text-white transition-all dashed-border-r text-white/40"
+                                                    title="View Details"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveFavorite(game.id)}
+                                                    className="p-2 hover:bg-red-600 hover:text-white transition-all text-white/40"
+                                                    title="Remove from Favorites"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 mb-8">
-                                            <div className="w-2 h-2 bg-blue-600"></div>
-                                            <span className="text-[8px] uppercase font-black tracking-widest text-white/40">{fav.platform}</span>
+                                        <div className="aspect-video mb-6 overflow-hidden border border-[#333] border-dashed bg-black/50">
+                                            <img
+                                                src={game.banner_image || 'https://placehold.co/400x225/111/white?text=No+Image'}
+                                                alt={game.title}
+                                                className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                                            />
                                         </div>
-                                        <button className="w-full py-3 border border-[#333] border-dashed text-[8px] uppercase font-black tracking-widest hover:bg-white hover:text-black transition-all">
+                                        <button
+                                            onClick={() => router.push(`/games/${game.id}`)}
+                                            className="w-full py-3 border border-[#333] border-dashed text-[8px] uppercase font-black tracking-widest hover:bg-white hover:text-black transition-all"
+                                        >
                                             Launch_Intel_Portal
                                         </button>
                                     </div>

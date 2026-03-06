@@ -3,22 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\Review;
+use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
     /**
-     * Display a listing of the authenticated user's reviews.
+     * Display all reviews for a specific game.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $reviews = Auth::user()->reviews()->with('game')->latest()->get();
-        return response()->json($reviews);
+        $query = Review::with('user')->latest();
+
+        if ($request->has('game_id')) {
+            $query->where('game_id', $request->game_id);
+        } else {
+            // If no game_id, return user's own reviews
+            $query->where('user_id', Auth::id())->with('game');
+        }
+
+        return response()->json($query->get());
     }
 
     /**
-     * Store a newly created review in storage.
+     * Store a newly created review.
      */
     public function store(Request $request)
     {
@@ -26,28 +35,23 @@ class ReviewController extends Controller
             'game_id' => 'required|exists:games,id',
             'content' => 'required|string',
             'rating' => 'required|integer|min:1|max:5',
-            'description' => 'required|string',
-            'user_id' => 'required|exists:users,id',
         ]);
 
-        $review = Auth::user()->reviews()->create($validated);
+        $review = Review::create([
+            'user_id' => Auth::id(),
+            'game_id' => $validated['game_id'],
+            'content' => $validated['content'],
+            'rating' => $validated['rating'],
+        ]);
 
         return response()->json([
-            'message' => 'Review posted successfully',
-            'review' => $review->load('game')
+            'message' => 'Review saved successfully',
+            'review' => $review->load(['user', 'game'])
         ], 201);
     }
 
     /**
-     * Display the specified review.
-     */
-    public function show(Review $review)
-    {
-        return response()->json($review->load('game', 'user'));
-    }
-
-    /**
-     * Update the specified review in storage.
+     * Update the specified review.
      */
     public function update(Request $request, Review $review)
     {
@@ -58,20 +62,18 @@ class ReviewController extends Controller
         $validated = $request->validate([
             'content' => 'required|string',
             'rating' => 'required|integer|min:1|max:5',
-            'description' => 'required|string',
-            'user_id' => 'required|exists:users,id',
         ]);
 
         $review->update($validated);
 
         return response()->json([
             'message' => 'Review updated successfully',
-            'review' => $review->load('game')
+            'review' => $review->load(['user', 'game'])
         ]);
     }
 
     /**
-     * Remove the specified review from storage.
+     * Remove the specified review.
      */
     public function destroy(Review $review)
     {

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import api from '@/lib/api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -12,7 +14,6 @@ interface Game {
     description: string;
     genre: string;
     platform: string;
-    cost: number;
     banner_image: string | null;
 }
 
@@ -23,7 +24,7 @@ interface PaginationData {
     data: Game[];
 }
 
-export default function GamesPage() {
+function GamesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -34,15 +35,9 @@ export default function GamesPage() {
     const [genre, setGenre] = useState(searchParams.get('genre') || 'all');
     const [platform, setPlatform] = useState(searchParams.get('platform') || 'all');
     const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
-    const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
 
     const [genresList, setGenresList] = useState<any[]>([]);
     const [platformsList, setPlatformsList] = useState<any[]>([]);
-
-    const [reviewingGame, setReviewingGame] = useState<Game | null>(null);
-    const [reviewContent, setReviewContent] = useState('');
-    const [reviewRating, setReviewRating] = useState(5);
-    const [postingReview, setPostingReview] = useState(false);
 
     const fetchGames = useCallback(async () => {
         setLoading(true);
@@ -64,30 +59,27 @@ export default function GamesPage() {
             const response = await api.get(`/games?${params.toString()}`);
             const rawData = response.data;
 
-            const gamesDataList = rawData.games?.results || [];
-
-            const games: Game[] = gamesDataList.map((rawGame: any) => ({
-                id: rawGame.id,
-                title: rawGame.name,
-                description: `Released: ${rawGame.released || 'Unknown'} | Rating: ${rawGame.rating || 'N/A'}`,
-                genre: rawGame.genres?.map((g: any) => g.name).join(', ') || 'Unknown',
-                platform: rawGame.parent_platforms?.map((p: any) => p.platform.name).join(', ') || 'Unknown',
-                cost: 59.99,
-                banner_image: rawGame.background_image
+            const games: Game[] = (rawData.data || []).map((dbGame: any) => ({
+                id: dbGame.id,
+                title: dbGame.title,
+                description: dbGame.description,
+                genre: dbGame.genre,
+                platform: dbGame.platform,
+                banner_image: dbGame.banner_image
             }));
 
             setGamesData({
-                current_page: page,
-                last_page: Math.max(1, Math.ceil((rawData.games?.count || 0) / 12)),
-                total: rawData.games?.count || 0,
+                current_page: rawData.current_page,
+                last_page: rawData.last_page,
+                total: rawData.total,
                 data: games
             });
 
-            if (rawData.genres?.results && genresList.length === 0) {
-                setGenresList(rawData.genres.results);
+            if (rawData.genres && genresList.length === 0) {
+                setGenresList(rawData.genres);
             }
-            if (rawData.platforms?.results && platformsList.length === 0) {
-                setPlatformsList(rawData.platforms.results.filter((p: any) => p && p.id && p.name));
+            if (rawData.platforms && platformsList.length === 0) {
+                setPlatformsList(rawData.platforms);
             }
         } catch (error) {
             console.error('Failed to fetch games', error);
@@ -99,40 +91,6 @@ export default function GamesPage() {
     useEffect(() => {
         fetchGames();
     }, [fetchGames]);
-
-    // Carousel Auto-play
-    useEffect(() => {
-        if (!gamesData || gamesData.data.length === 0) return;
-        const interval = setInterval(() => {
-            setActiveCarouselIndex((prev) => (prev + 1) % Math.min(gamesData.data.length, 5));
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [gamesData]);
-
-    const carouselGames = useMemo(() => {
-        return gamesData ? gamesData.data.slice(0, 5) : [];
-    }, [gamesData]);
-
-    const handlePostReview = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setPostingReview(true);
-        try {
-            await api.post('/reviews', {
-                game_id: reviewingGame?.id,
-                content: reviewContent,
-                rating: reviewRating
-            });
-            setReviewingGame(null);
-            setReviewContent('');
-            setReviewRating(5);
-            alert('Review posted! Check your profile.');
-        } catch (err) {
-            console.error('Failed to post review', err);
-            alert('Failed to post review. Please try again.');
-        } finally {
-            setPostingReview(false);
-        }
-    };
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -235,8 +193,6 @@ export default function GamesPage() {
                         ))}
                     </div>
 
-                    {/* Review Modal - functionality moved to game details */}
-
                     {/* Pagination */}
                     {gamesData && gamesData.last_page > 1 && (
                         <div className="relative z-10 mt-16 flex justify-center items-center gap-0 border border-[#333] border-dashed w-fit mx-auto">
@@ -270,5 +226,17 @@ export default function GamesPage() {
                 </>
             )}
         </div>
+    );
+}
+
+export default function GamesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black text-white flex items-center justify-center pt-24 pb-12 px-8">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            </div>
+        }>
+            <GamesContent />
+        </Suspense>
     );
 }

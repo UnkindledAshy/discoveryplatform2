@@ -58,4 +58,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Review::class);
     }
+
+    public function favorites()
+    {
+        return $this->belongsToMany(Game::class, 'favorites');
+    }
 }

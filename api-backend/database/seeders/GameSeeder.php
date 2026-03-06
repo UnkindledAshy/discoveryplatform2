@@ -13,23 +13,47 @@ class GameSeeder extends Seeder
     public function run(): void
     {
         $adminId = \App\Models\User::where('email', 'admin@example.com')->first()?->id ?? 1;
+        $apiKey = env('RAWG_API_KEY', '51ae123f5007407b899b5bbe8f52aa75');
 
-        $games = [
-            ['title' => 'Cyberpunk 2077', 'genre' => 'RPG', 'platform' => 'PC', 'cost' => 60, 'description' => 'Night City changes every body.', 'users' => $adminId],
-            ['title' => 'Elden Ring', 'genre' => 'RPG', 'platform' => 'PlayStation', 'cost' => 70, 'description' => 'Rise, Tarnished.', 'users' => $adminId],
-            ['title' => 'Valorant', 'genre' => 'Shooter', 'platform' => 'PC', 'cost' => 0, 'description' => 'Defy the limits.', 'users' => $adminId],
-            ['title' => 'FIFA 24', 'genre' => 'Sports', 'platform' => 'Xbox', 'cost' => 60, 'description' => 'The worlds game.', 'users' => $adminId],
-            ['title' => 'Starfield', 'genre' => 'RPG', 'platform' => 'PC', 'cost' => 70, 'description' => 'To the stars.', 'users' => $adminId],
-            ['title' => 'God of War Ragnarok', 'genre' => 'Action', 'platform' => 'PlayStation', 'cost' => 70, 'description' => 'Fimbulwinter is here.', 'users' => $adminId],
-            ['title' => 'Spider-Man 2', 'genre' => 'Action', 'platform' => 'PlayStation', 'cost' => 70, 'description' => 'Be greater together.', 'users' => $adminId],
-            ['title' => 'Halo Infinite', 'genre' => 'Shooter', 'platform' => 'Xbox', 'cost' => 60, 'description' => 'Become the Master Chief.', 'users' => $adminId],
-            ['title' => 'Forza Horizon 5', 'genre' => 'Sports', 'platform' => 'Xbox', 'cost' => 60, 'description' => 'The ultimate driving adventure.', 'users' => $adminId],
-            ['title' => 'Final Fantasy XVI', 'genre' => 'RPG', 'platform' => 'PlayStation', 'cost' => 70, 'description' => 'Awaken the eikon.', 'users' => $adminId],
-            ['title' => 'Street Fighter 6', 'genre' => 'Action', 'platform' => 'PC', 'cost' => 60, 'description' => 'The path to strength.', 'users' => $adminId],
-        ];
+        // Fetch multiple pages of games to get a good library
+        for ($page = 1; $page <= 2; $page++) {
+            $response = \Illuminate\Support\Facades\Http::get('https://api.rawg.io/api/games', [
+                'key' => $apiKey,
+                'page' => $page,
+                'page_size' => 20,
+            ]);
 
-        foreach ($games as $game) {
-            \App\Models\Game::create($game);
+            if ($response->failed()) {
+                continue;
+            }
+
+            $games = $response->json()['results'] ?? [];
+
+            foreach ($games as $gameData) {
+                // Fetch full game details for description and developers
+                $detailResponse = \Illuminate\Support\Facades\Http::get("https://api.rawg.io/api/games/{$gameData['id']}", [
+                    'key' => $apiKey,
+                ]);
+
+                $details = $detailResponse->successful() ? $detailResponse->json() : [];
+
+                \App\Models\Game::updateOrCreate(
+                    ['rawg_id' => $gameData['id']],
+                    [
+                        'title' => $gameData['name'],
+                        'description' => $details['description'] ?? "Released: {$gameData['released']} | Rating: {$gameData['rating']}",
+                        'genre' => collect($gameData['genres'] ?? [])->pluck('name')->implode(', '),
+                        'platform' => collect($gameData['platforms'] ?? [])->pluck('platform.name')->implode(', '),
+                        'banner_image' => $gameData['background_image'],
+                        'rating' => $gameData['rating'],
+                        'released' => $gameData['released'],
+                        'developers' => $details['developers'] ?? [],
+                        'raw_genres' => $gameData['genres'] ?? [],
+                        'raw_platforms' => $gameData['platforms'] ?? [],
+                        'users' => $adminId,
+                    ]
+                );
+            }
         }
     }
 }
