@@ -10,8 +10,11 @@ class GameController extends Controller
     public function index(Request $request)
     {
         $apiKey = env('RAWG_API_KEY', '51ae123f5007407b899b5bbe8f52aa75');
-        $adminId = \App\Models\User::where('email', 'admin@example.com')->first()?->id ?? 1;
-
+        $adminUser = \App\Models\User::firstOrCreate(
+            ['email' => 'admin@example.com'],
+            ['name' => 'Admin', 'password' => bcrypt('password'), 'is_admin' => true]
+        );
+        $adminId = $adminUser->id;
         // 1. Fetch from RAWG to sync DB (Just-In-Time Seeding)
         $rawgParams = [
             'key' => $apiKey,
@@ -119,8 +122,11 @@ class GameController extends Controller
 
         if (!$game || $isPlaceholder) {
             $apiKey = env('RAWG_API_KEY', '51ae123f5007407b899b5bbe8f52aa75');
-            $adminId = \App\Models\User::where('email', 'admin@example.com')->first()?->id ?? 1;
-
+            $adminUser = \App\Models\User::firstOrCreate(
+                ['email' => 'admin@example.com'],
+                ['name' => 'Admin', 'password' => bcrypt('password'), 'is_admin' => true]
+            );
+            $adminId = $adminUser->id;
             $rawgId = $game ? $game->rawg_id : $id;
             $response = \Illuminate\Support\Facades\Http::get("https://api.rawg.io/api/games/{$rawgId}", [
                 'key' => $apiKey

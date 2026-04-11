@@ -38,6 +38,7 @@ function GamesContent() {
 
     const [genresList, setGenresList] = useState<any[]>([]);
     const [platformsList, setPlatformsList] = useState<any[]>([]);
+    const [recommendations, setRecommendations] = useState<any[]>([]);
 
     const fetchGames = useCallback(async () => {
         setLoading(true);
@@ -92,6 +93,14 @@ function GamesContent() {
         fetchGames();
     }, [fetchGames]);
 
+    useEffect(() => {
+        if (localStorage.getItem('token')) {
+            api.get('/recommendations')
+                .then(res => setRecommendations(res.data))
+                .catch(err => console.error('Failed to fetch recommendations', err));
+        }
+    }, []);
+
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setSearch(searchInput);
@@ -114,6 +123,35 @@ function GamesContent() {
                     Explore the complete library of game titles integrated with the Discovery platform. Use filters to narrow down your search.
                 </p>
             </div>
+
+            {/* Recommendations Section */}
+            {recommendations.length > 0 && (
+                <div className="relative z-10 mb-16">
+                    <div className="inline-block px-3 py-1 mb-6 border border-blue-600/30 bg-blue-600/5 text-[10px] uppercase tracking-[0.3em] font-black text-blue-500">
+                        Top Picks For You
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                        {recommendations.slice(0, 5).map((recGame: any) => (
+                            <Link href={`/games/${recGame.id}`} key={recGame.id} className="block group border border-[#333] border-dashed bg-black p-4 hover:border-blue-500 transition-colors">
+                                <div className="absolute top-4 right-4 z-20 bg-blue-600 px-3 py-1 text-[8px] font-black tracking-[0.3em] uppercase text-white animate-pulse">
+                                    RECOMMENDED
+                                </div>
+                                <div className="aspect-video mb-4 overflow-hidden border border-[#333] border-dashed bg-black/50 relative">
+                                    <img
+                                        src={recGame.banner_image || 'https://placehold.co/400x225/111/white?text=No+Image'}
+                                        alt={recGame.title}
+                                        className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                                    />
+                                </div>
+                                <h3 className="font-black text-sm uppercase tracking-tight group-hover:text-blue-500 transition-colors line-clamp-1">{recGame.title}</h3>
+                                <div className="mt-2 text-[8px] text-white/50 tracking-widest uppercase line-clamp-2">
+                                    {recGame.recommendation_reason}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Filter & Search Bar */}
             <div className="relative z-10 flex flex-col md:flex-row gap-0 mb-12 bg-black border border-[#333] border-dashed overflow-hidden">

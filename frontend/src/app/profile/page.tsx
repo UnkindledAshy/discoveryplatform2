@@ -24,6 +24,7 @@ interface User {
     email: string;
     created_at: string;
     is_admin: boolean;
+    receives_recommendation_emails?: boolean;
 }
 
 export default function ProfilePage() {
@@ -33,8 +34,9 @@ export default function ProfilePage() {
     const [editingReview, setEditingReview] = useState<Review | null>(null);
     const [editContent, setEditContent] = useState('');
     const [editRating, setEditRating] = useState(5);
-    const [activeTab, setActiveTab] = useState<'reviews' | 'favorites'>('reviews');
+    const [activeTab, setActiveTab] = useState<'reviews' | 'favorites' | 'recommendations'>('reviews');
     const [favorites, setFavorites] = useState<{ id: number; title: string; platform: string }[]>([]);
+    const [recommendations, setRecommendations] = useState<{ id: number; title: string; platform: string, banner_image: string, recommendation_reason: string }[]>([]);
     const router = useRouter();
 
     const handleAvatarUpload = () => {
@@ -44,7 +46,7 @@ export default function ProfilePage() {
         input.onchange = (e: any) => {
             const file = e.target.files[0];
             if (file) {
-                alert(`INITIALIZING_UPLOAD: ${file.name}\n(INTEGRATION_PENDING_BACKEND)`);
+                alert(`Upload: ${file.name}\n(Integration pending)`);
             }
         };
         input.click();
@@ -68,6 +70,9 @@ export default function ProfilePage() {
 
                 const favoritesRes = await api.get('/favorites');
                 setFavorites(favoritesRes.data);
+
+                const recommendationsRes = await api.get('/recommendations');
+                setRecommendations(recommendationsRes.data);
             } catch (err) {
                 console.error('Failed to load profile data', err);
                 if ((err as any).response?.status === 401) {
@@ -83,22 +88,22 @@ export default function ProfilePage() {
     }, [router]);
 
     const handleDelete = async (id: number) => {
-        if (!confirm('CONFIRM_DELETION_OF_ENTRY?')) return;
+        if (!confirm('Are you sure you want to delete this review?')) return;
         try {
             await api.delete(`/reviews/${id}`);
             setReviews(reviews.filter(r => r.id !== id));
         } catch (err) {
-            alert('ERR_DELETION_FAILED');
+            alert('Failed to delete review');
         }
     };
 
     const handleRemoveFavorite = async (gameId: number) => {
-        if (!confirm('REMOVE_GAME_FROM_YOUR_COLLECTION?')) return;
+        if (!confirm('Remove game from favorites?')) return;
         try {
             await api.post('/favorites', { game_id: gameId });
             setFavorites(favorites.filter(f => f.id !== gameId));
         } catch (err) {
-            alert('ERR_REMOVAL_FAILED');
+            alert('Failed to remove favorite');
         }
     };
 
@@ -116,7 +121,7 @@ export default function ProfilePage() {
             setReviews(reviews.map(r => r.id === editingReview.id ? updatedReview : r));
             setEditingReview(null);
         } catch (err) {
-            alert('ERR_UPDATE_FAILED');
+            alert('Failed to update review');
         }
     };
 
@@ -125,7 +130,7 @@ export default function ProfilePage() {
             <div className="min-h-screen bg-black flex items-center justify-center font-black text-blue-600">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border border-[#333] border-dashed animate-spin"></div>
-                    <span className="tracking-[0.4em] uppercase text-[10px]">Synchronizing_Profile...</span>
+                    <span className="tracking-[0.4em] uppercase text-[10px]">Loading Profile...</span>
                 </div>
             </div>
         );
@@ -156,7 +161,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
                         <div className="inline-block w-fit px-3 py-1 mb-4 border border-blue-600 border-dashed text-[10px] uppercase tracking-[0.3em] font-black text-blue-500">
-                            {user?.is_admin ? 'ADMIN_ACCOUNT' : 'USER_ACCOUNT'}
+                            {user?.is_admin ? 'Admin' : 'User'}
                         </div>
                         <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 uppercase leading-none">
                             {user?.name}<span className="text-blue-600">.</span>
@@ -171,6 +176,22 @@ export default function ProfilePage() {
                                 <div className="pt-4 border-t border-[#333] border-dashed">
                                     <span className="block text-[8px] uppercase font-black text-white/20 tracking-[0.3em] mb-1">Email</span>
                                     <span className="text-sm font-bold uppercase tracking-widest text-white/60">{user?.email}</span>
+                                </div>
+                                <div className="pt-4 border-t border-[#333] border-dashed">
+                                    <span className="block text-[8px] uppercase font-black text-white/20 tracking-[0.3em] mb-1">Weekly Recommendations</span>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await api.post('/user/email-preferences');
+                                                setUser(prev => prev ? { ...prev, receives_recommendation_emails: res.data.receives_recommendation_emails } : null);
+                                            } catch (e) {
+                                                console.error(e);
+                                            }
+                                        }}
+                                        className={`px-4 py-2 mt-2 text-[10px] font-black tracking-widest uppercase border border-dashed transition-all ${user?.receives_recommendation_emails ? 'border-blue-600 text-blue-500 bg-blue-600/10 hover:bg-blue-600/20' : 'border-[#333] text-white/40 hover:bg-white/5'}`}
+                                    >
+                                        {user?.receives_recommendation_emails ? 'Weekly Emails : Active' : 'Weekly Emails : Disabled'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -194,13 +215,20 @@ export default function ProfilePage() {
                             Favorites
                             {activeTab === 'favorites' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-600"></div>}
                         </button>
+                        <button
+                            onClick={() => setActiveTab('recommendations')}
+                            className={`pb-8 text-2xl font-black tracking-tighter uppercase transition-all relative ${activeTab === 'recommendations' ? 'text-white' : 'text-white/20 hover:text-white/40'}`}
+                        >
+                            For You
+                            {activeTab === 'recommendations' && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-600"></div>}
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-[#333] border-dashed">
                         {activeTab === 'reviews' ? (
                             reviews.length === 0 ? (
                                 <div className="col-span-full py-32 flex flex-col items-center justify-center border-r border-b border-[#333] border-dashed">
-                                    <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">NO_REVIEWS_RECORDED</h3>
+                                    <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">No Reviews</h3>
                                 </div>
                             ) : (
                                 reviews.map((review) => (
@@ -240,17 +268,17 @@ export default function ProfilePage() {
 
                                         <div className="flex items-center justify-between pt-6 border-t border-[#333] border-dashed">
                                             <span className="text-[8px] uppercase font-black text-white/20 tracking-[0.2em]">
-                                                VERIFIED: {new Date(review.created_at).toLocaleDateString()}
+                                                {new Date(review.created_at).toLocaleDateString()}
                                             </span>
                                             <div className="w-2 h-2 bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.6)]"></div>
                                         </div>
                                     </div>
                                 ))
                             )
-                        ) : (
+                        ) : activeTab === 'favorites' ? (
                             favorites.length === 0 ? (
                                 <div className="col-span-full py-32 flex flex-col items-center justify-center border-r border-b border-[#333] border-dashed">
-                                    <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">NO_FAVORITES_RECORDED</h3>
+                                    <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">No Favorites</h3>
                                 </div>
                             ) : (
                                 favorites.map((game: any) => (
@@ -288,7 +316,44 @@ export default function ProfilePage() {
                                             onClick={() => router.push(`/games/${game.id}`)}
                                             className="w-full py-3 border border-[#333] border-dashed text-[8px] uppercase font-black tracking-widest hover:bg-white hover:text-black transition-all"
                                         >
-                                            Launch_Intel_Portal
+                                            View Details
+                                        </button>
+                                    </div>
+                                ))
+                            )
+                        ) : (
+                            recommendations.length === 0 ? (
+                                <div className="col-span-full py-32 flex flex-col items-center justify-center border-r border-b border-[#333] border-dashed">
+                                    <h3 className="text-xl font-black text-white/20 uppercase tracking-[0.4em]">No Recommendations</h3>
+                                    <p className="text-white/40 mt-4 text-[10px] tracking-widest uppercase">Favorite or review games to get personalized suggestions</p>
+                                </div>
+                            ) : (
+                                recommendations.map((game: any) => (
+                                    <div key={game.id} className="relative border-r border-b border-[#333] border-dashed p-8 hover:bg-white/5 transition-all group">
+                                        <div className="absolute top-4 right-4 bg-blue-600 px-3 py-1 text-[8px] font-black tracking-[0.3em] uppercase text-white animate-pulse">
+                                            RECOMMENDED
+                                        </div>
+                                        <div className="flex justify-between items-start mb-6 mt-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-[8px] text-blue-500 font-black uppercase tracking-[0.3em] mb-1">RECOMMENDED</span>
+                                                <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-blue-500 transition-colors uppercase pr-8">{game.title}</h3>
+                                            </div>
+                                        </div>
+                                        <div className="aspect-video mb-6 overflow-hidden border border-[#333] border-dashed bg-black/50">
+                                            <img
+                                                src={game.banner_image || 'https://placehold.co/400x225/111/white?text=No+Image'}
+                                                alt={game.title}
+                                                className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                                            />
+                                        </div>
+                                        <div className="mb-6 p-4 border border-blue-900/30 bg-blue-900/10 dashed-border">
+                                            <p className="text-xs text-white/70 tracking-widest uppercase">{game.recommendation_reason}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => router.push(`/games/${game.id}`)}
+                                            className="w-full py-3 border border-blue-600 bg-blue-600/10 text-[8px] uppercase font-black tracking-widest hover:bg-blue-600 hover:text-white transition-all text-blue-500"
+                                        >
+                                            View Details
                                         </button>
                                     </div>
                                 ))
@@ -303,10 +368,10 @@ export default function ProfilePage() {
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/95 backdrop-blur-sm">
                     <div className="bg-black border border-[#333] border-dashed w-full max-w-md p-10 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-[#333] border-dashed m-4"></div>
-                        <h2 className="text-3xl font-black mb-12 tracking-tighter uppercase">Modify_Entry</h2>
+                        <h2 className="text-3xl font-black mb-12 tracking-tighter uppercase">Edit Review</h2>
                         <form onSubmit={handleUpdate} className="space-y-8">
                             <div>
-                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Update Score</label>
+                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Rating</label>
                                 <div className="flex justify-between gap-1">
                                     {[1, 2, 3, 4, 5].map((num) => (
                                         <button
@@ -324,7 +389,7 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Edit Narrative</label>
+                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Review Content</label>
                                 <textarea
                                     required
                                     rows={5}
@@ -338,7 +403,7 @@ export default function ProfilePage() {
                                     type="submit"
                                     className="flex-[2] py-4 bg-blue-600 text-white text-[10px] uppercase tracking-widest font-black hover:bg-blue-700 transition-all border border-transparent"
                                 >
-                                    COMMIT_CHANGES
+                                    Save Changes
                                 </button>
                                 <button
                                     type="button"

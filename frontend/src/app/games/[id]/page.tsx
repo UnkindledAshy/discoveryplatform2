@@ -13,6 +13,7 @@ function GameDetailsContent({ id }: { id: string }) {
 
     const [isFavorite, setIsFavorite] = useState(false);
     const [reviews, setReviews] = useState<any[]>([]);
+    const [recommendations, setRecommendations] = useState<any[]>([]);
     const [reviewContent, setReviewContent] = useState('');
     const [reviewRating, setReviewRating] = useState(5);
     const [submittingReview, setSubmittingReview] = useState(false);
@@ -36,6 +37,16 @@ function GameDetailsContent({ id }: { id: string }) {
                 // Fetch reviews
                 const reviewRes = await api.get(`/reviews?game_id=${response.data.id}`);
                 setReviews(reviewRes.data);
+
+                // Fetch recommendations (skip if unauthenticated to avoid 401 redirects)
+                if (localStorage.getItem('token')) {
+                    try {
+                        const recRes = await api.get('/recommendations');
+                        setRecommendations(recRes.data);
+                    } catch (e) {
+                        console.error('Failed fetching recommendations:', e);
+                    }
+                }
             } catch (error: any) {
                 console.error('Error fetching game data:', error);
                 setErrorMsg(error.message || 'Unknown error');
@@ -178,10 +189,11 @@ function GameDetailsContent({ id }: { id: string }) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                    {/* Write Review */}
                     <div className="space-y-8">
                         <div>
                             <h2 className="text-3xl font-black tracking-tighter uppercase mb-2">Write a Review</h2>
-                            <p className="text-white/40 text-xs font-medium uppercase tracking-widest">Submit your review regarding this game</p>
+                            <p className="text-white/40 text-xs font-medium uppercase tracking-widest">Submit your intel report regarding this entry</p>
                         </div>
 
                         <form onSubmit={submitReview} className="space-y-8">
@@ -202,13 +214,13 @@ function GameDetailsContent({ id }: { id: string }) {
                             </div>
 
                             <div>
-                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Review</label>
+                                <label className="block text-[8px] uppercase font-black text-white/30 tracking-[0.2em] mb-4">Intel Narrative</label>
                                 <textarea
                                     required
                                     rows={6}
                                     value={reviewContent}
                                     onChange={(e) => setReviewContent(e.target.value)}
-                                    placeholder="Enter your Review..."
+                                    placeholder="Enter your field report..."
                                     className="w-full bg-white/5 border border-[#333] border-dashed p-6 text-[10px] font-bold uppercase tracking-[0.2em] outline-none focus:bg-blue-600/5 transition-all resize-none text-white/80"
                                 />
                             </div>
@@ -223,10 +235,11 @@ function GameDetailsContent({ id }: { id: string }) {
                         </form>
                     </div>
 
+                    {/* Community Reviews */}
                     <div className="space-y-8">
                         <div className="flex items-center justify-between border-b border-[#333] border-dashed pb-4">
                             <h2 className="text-2xl font-black tracking-tighter uppercase">Community Reviews</h2>
-                            <div className="text-[10px] font-black text-blue-500">{reviews.length} REVIEWS</div>
+                            <div className="text-[10px] font-black text-blue-500">{reviews.length}REVIEWS</div>
                         </div>
 
                         <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
@@ -256,13 +269,40 @@ function GameDetailsContent({ id }: { id: string }) {
                                 ))
                             ) : (
                                 <div className="py-20 flex flex-col items-center justify-center border border-[#333] border-dashed opacity-20">
-                                    <span className="text-[10px] font-black tracking-[0.5em] uppercase">No_Intel_Available</span>
+                                    <span className="text-[10px] font-black tracking-[0.5em] uppercase">No_Reviews_Available</span>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Recommended For You Section */}
+            {recommendations.length > 0 && (
+                <div className="relative z-10 mt-16 pt-8 border-t border-[#333] border-dashed">
+                    <h2 className="text-2xl font-black tracking-tighter uppercase mb-8">Recommended For You</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+                        {recommendations.slice(0, 5).map((recGame: any) => (
+                            <Link href={`/games/${recGame.id}`} key={recGame.id} className="block group border border-[#333] border-dashed bg-black p-4 hover:border-blue-500 transition-colors">
+                                <div className="absolute top-4 right-4 z-20 bg-blue-600 px-3 py-1 text-[8px] font-black tracking-[0.3em] uppercase text-white animate-pulse">
+                                    RECOMMENDED
+                                </div>
+                                <div className="aspect-video mb-4 overflow-hidden border border-[#333] border-dashed bg-black/50 relative">
+                                    <img
+                                        src={recGame.banner_image || 'https://placehold.co/400x225/111/white?text=No+Image'}
+                                        alt={recGame.title}
+                                        className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                                    />
+                                </div>
+                                <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-blue-500 transition-colors">{recGame.title}</h3>
+                                <div className="mt-2 text-[10px] text-white/50 tracking-widest uppercase">
+                                    {recGame.recommendation_reason}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

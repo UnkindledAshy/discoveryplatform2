@@ -77,4 +77,15 @@ class AuthController extends Controller
             'message' => 'User logged out successfully'
         ], 200);
     }
+
+    //Toggle Email Preferences
+    public function toggleEmailPreference(Request $request){
+        $user = auth()->user();
+        $user->receives_recommendation_emails = !$user->receives_recommendation_emails;
+        $user->save();
+        return response()->json([
+            'message' => 'Email preferences updated',
+            'receives_recommendation_emails' => $user->receives_recommendation_emails
+        ]);
+    }
 }
